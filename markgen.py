@@ -28,10 +28,12 @@
 
 # http://textfiles.com/adventure/221baker.txt
 
-import argparse
+# import argparse
 import re
+import pickle
 # import os
 import subprocess
+import sys
 
 # def __get_data(self):
 #     cmdline = ["cmd", "/q", "/k", 'diskpart /s %s' % (self.filename)]
@@ -44,41 +46,53 @@ import subprocess
 # for command in commands:
 #     script_file.write('%s\n' % (command))
 # script_file.close()
+def save_obj(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, 0)
+        # pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
 
 class Sources:
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, filename):
+        self.filename = filename
 
     def get_sources(self):
         sources = []
-        config_file = open(self.config, "r")
+        config_file = open(self.filename, "r")
         for line in config_file:
             sources.append(line)
-        script_file.close()
+        config_file.close()
         return sources
 
 class Learner:
-    def __init__(self, sources, order = 1):
+    def __init__(self, sources, order, filename):
         self.sources = sources
         self.chain = {}
         self.order = order
+        self.filename = filename
 
     def learn(self):
         for file_url in self.sources:
             self.add_file_to_chain(file_url)
+        save_obj(self.chain, filename)
 
     def add_file_to_chain(self, file_url):
         words = self.read_words(file_url)
         # chains = {}
         for index in range(self.order, len(words)):
             segment = tuple(words[(index - order) : index])
+            # print "Segment: ", segment
             word = words[index]
+            # print "Word: ", word
             if segment not in self.chain:
                 self.chain[segment] = [word]
+                # print "Segment not in chain yet, creating it: ", self.chain[segment]
             else:
-                self.chain[segment].append(word)
-        print self.chain
-
+                if word not in self.chain[segment]: self.chain[segment].append(word)
+                # print "Segment already in chain: ", self.chain[segment]
 
     def read_file(self, file_url):
         cmdline = ["curl %s" % (file_url)]
@@ -94,11 +108,46 @@ class Learner:
         # for word in words: print word
         return words
 
-order = 3
-l = Learner(["http://textfiles.com/adventure/221baker.txt", "http://textfiles.com/100/anonymit"], order)
-l.learn()
+class ChainUser:
+    def __init__(self, file):
+        self.chain = load_obj(file)
+        print self.chain
+
+def confini():
+    if len(sys.argv) == 1:
+        print "HELP!!!"
+    elif sys.argv[1] == "-l":
+        print "Learn!"
+        print "Links to text file name: ", sys.argv[2]
+        print "Order: ", sys.argv[3]
+        print "Output file name: ", sys.argv[4]
+        sources = Sources(sys.argv[2])
+        order = sys.argv[3]
+        filename = sys.argv[4]
+        l = Learner(sources.get_sources(), order, filename)
+        l.learn()
+    elif sys.argv[1] == "-u":
+        print "Use!"
+        print "Links file: ", sys.argv[2]
+        print "Order: ", sys.argv[3]
+        print "Dictum length: ", sys.argv[4]
+    else:
+        print "ERROR!!!"
+
+confini()
+
+
+
+# order = 2
+# l = Learner(["http://textfiles.com/adventure/221baker.txt", "http://textfiles.com/100/anonymit", "http://textfiles.com/programming/archives.txt"], order)
+# l = Learner(["http://textfiles.com/sf/apf-6.0"], order)
+# l = Learner(["http://norvig.com/big.txt"], order)
+
+# l.learn()
+# c = ChainUser("markov.cnf")
 # tt = l.read_words("http://textfiles.com/adventure/221baker.txt")
 # for word in tt:
+
 #     print word
 
 # print "Total: %s words" % (len(tt))
