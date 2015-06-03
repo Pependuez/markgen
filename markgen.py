@@ -4,8 +4,9 @@
 # и уравнения из статьи - они немного про другое.
 # Тут всё можно сделать базовыми средствами Питона, которые ты уже знаешь.
 
-# Требуется построить марковcкий генератор текстов n-го порядка (http://ru.wikipedia.org/wiki/Цепь_Маркова). Логически состоит из
-# двух компонент - обучающей и эксплуатирующей.
+# Требуется построить марковcкий генератор текстов n-го порядка
+# (http://ru.wikipedia.org/wiki/Цепь_Маркова).
+# Логически состоит из двух компонент - обучающей и эксплуатирующей.
 
 # Обучающей части на вход подается список урлов, ведущих на текстовые
 # файлы. Она должна скачать их, вызывая внутри curl и получая от него
@@ -57,17 +58,27 @@ class Sources:
         return sources
 
 class Learner:
-    def __init__(self, sources):
+    def __init__(self, sources, order = 1):
         self.sources = sources
         self.chain = {}
+        self.order = order
 
     def learn(self):
         for file_url in self.sources:
-            add_file_to_chain(file_url)
+            self.add_file_to_chain(file_url)
 
     def add_file_to_chain(self, file_url):
-        words = read_words(file_url)
-        pass
+        words = self.read_words(file_url)
+        # chains = {}
+        for index in range(self.order, len(words)):
+            segment = tuple(words[(index - order) : index])
+            word = words[index]
+            if segment not in self.chain:
+                self.chain[segment] = [word]
+            else:
+                self.chain[segment].append(word)
+        print self.chain
+
 
     def read_file(self, file_url):
         cmdline = ["curl %s" % (file_url)]
@@ -79,20 +90,20 @@ class Learner:
     def read_words(self, file_url):
         regex = re.compile('[^a-z0-9$]')
         text = self.read_file(file_url).lower()
-        return [regex.sub('', word) for word in text.split()]
-        # return [word for word in text.split()]
+        words = [word for word in regex.sub(' ', text).split()]
+        # for word in words: print word
+        return words
 
-    # def write_data:
-    #     pass
+order = 3
+l = Learner(["http://textfiles.com/adventure/221baker.txt", "http://textfiles.com/100/anonymit"], order)
+l.learn()
+# tt = l.read_words("http://textfiles.com/adventure/221baker.txt")
+# for word in tt:
+#     print word
 
-l = Learner(["http://textfiles.com/adventure/221baker.txt"])
-tt = l.read_words("http://textfiles.com/adventure/221baker.txt")
-for word in tt:
-    print word
-
-print "Total: %s words" % (len(tt))
-s = Sources("config.cnf")
-print s.get_sources()
+# print "Total: %s words" % (len(tt))
+# s = Sources("config.cnf")
+# print s.get_sources()
 
 # def download_files(source):
 #     filenames=[]
