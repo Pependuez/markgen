@@ -31,9 +31,9 @@
 # import argparse
 import re
 import pickle
-# import os
 import subprocess
 import sys
+import os
 
 # def __get_data(self):
 #     cmdline = ["cmd", "/q", "/k", 'diskpart /s %s' % (self.filename)]
@@ -46,14 +46,14 @@ import sys
 # for command in commands:
 #     script_file.write('%s\n' % (command))
 # script_file.close()
-def save_obj(obj, name):
-    with open(name + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, 0)
+def save_obj(obj, filename):
+    with open(filename, 'w') as file:
+        pickle.dump(obj, file, 0)
         # pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
-def load_obj(name):
-    with open(name + '.pkl', 'rb') as f:
-        return pickle.load(f)
+def load_obj(filename):
+    with open(filename, 'r') as file:
+        return pickle.load(file)
 
 class Sources:
     def __init__(self, filename):
@@ -61,11 +61,23 @@ class Sources:
 
     def get_sources(self):
         sources = []
-        config_file = open(self.filename, "r")
-        for line in config_file:
-            sources.append(line)
-        config_file.close()
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        print "Pwd: ", current_directory
+        file = open(filename, 'r')
+        for line in file:
+            sources.append(line.rstrip())
+        print sources
+        file.close
         return sources
+
+    # def get_sources(self):
+    #     sources = []
+    #     config_file = open(self.filename, "r")
+    #     for line in config_file:
+    #         sources.append(line)
+    #     config_file.close()
+    #     return sources
+
 
 class Learner:
     def __init__(self, sources, order, filename):
@@ -113,28 +125,20 @@ class ChainUser:
         self.chain = load_obj(file)
         print self.chain
 
-def confini():
-    if len(sys.argv) == 1:
-        print "HELP!!!"
-    elif sys.argv[1] == "-l":
-        print "Learn!"
-        print "Links to text file name: ", sys.argv[2]
-        print "Order: ", sys.argv[3]
-        print "Output file name: ", sys.argv[4]
-        sources = Sources(sys.argv[2])
-        order = sys.argv[3]
-        filename = sys.argv[4]
-        l = Learner(sources.get_sources(), order, filename)
-        l.learn()
-    elif sys.argv[1] == "-u":
-        print "Use!"
-        print "Links file: ", sys.argv[2]
-        print "Order: ", sys.argv[3]
-        print "Dictum length: ", sys.argv[4]
-    else:
-        print "ERROR!!!"
 
-confini()
+# handle_args(sys.argv)
+def confini(args):
+    if len(args) == 1:
+        print "HELP!"
+    elif args[1] == "-l":
+        print "LEARN!"
+        get_sources(args[2])
+    elif args[1] == "-u":
+        print "USE!"
+    else:
+        print "HELP!!!!"
+
+confini(sys.argv)
 
 
 
@@ -164,3 +168,81 @@ confini()
 # def learn(files):
 #     for file in files:
 #         add_file_to_chains(file)
+
+# def confini():
+#     if len(sys.argv) == 1:
+#         print "HELP!!!"
+#     elif sys.argv[1] == "-l":
+#         print "Learn!"
+#         print "Links to text file name: ", sys.argv[2]
+#         print "Order: ", sys.argv[3]
+#         print "Output file name: ", sys.argv[4]
+#         sources = Sources(sys.argv[2])
+#         order = sys.argv[3]
+#         filename = sys.argv[4]
+#         l = Learner(sources.get_sources(), order, filename)
+#         l.learn()
+#     elif sys.argv[1] == "-u":
+#         print "Use!"
+#         print "Links file: ", sys.argv[2]
+#         print "Order: ", sys.argv[3]
+#         print "Dictum length: ", sys.argv[4]
+#     else:
+#         print "ERROR!!!"
+
+# def get_sources(filename):
+#     sources = []
+#     current_directory = os.path.dirname(os.path.realpath(__file__))
+#     print "Pwd: ", current_directory
+#     file = open(filename, 'r')
+#     for line in file:
+#         sources.append(line.rstrip())
+#     print sources
+#     file.close
+#     return sources
+
+# def handle_args(args):
+#     print args
+#     if len(args) == 1:
+#         print "HELP!"
+#     elif args[1] == "-l":
+#         print "LEARN!"
+#         get_sources(args[2])
+#     elif args[1] == "-u":
+#         print "USE!"
+#     else:
+#         print "HELP!!!!"
+
+
+
+
+
+
+
+# import sys
+# import os
+
+# def get_sources(filename):
+#     sources = []
+#     # current_directory = os.path.dirname(os.path.realpath(__file__))
+#     # print "Pwd: ", current_directory
+#     file = open(filename, 'r')
+#     for line in file:
+#         sources.append(line.rstrip())
+#     print sources
+#     file.close
+#     return sources
+
+# def handle_args(args):
+#     print args
+#     if len(args) == 1:
+#         print "HELP!"
+#     elif args[1] == "-l":
+#         print "LEARN!"
+#         get_sources(args[2])
+#     elif args[1] == "-u":
+#         print "USE!"
+#     else:
+#         print "HELP!!!!"
+
+# handle_args(sys.argv)
