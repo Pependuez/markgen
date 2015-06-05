@@ -1,145 +1,194 @@
 # -*- coding: utf-8 -*-
 
-# В решении не стоит делать что-то сложное или хитрое. Например, всякие сложные матрицы
-# и уравнения из статьи - они немного про другое.
-# Тут всё можно сделать базовыми средствами Питона, которые ты уже знаешь.
-
-# Требуется построить марковcкий генератор текстов n-го порядка
-# (http://ru.wikipedia.org/wiki/Цепь_Маркова).
-# Логически состоит из двух компонент - обучающей и эксплуатирующей.
-
-# Обучающей части на вход подается список урлов, ведущих на текстовые
-# файлы. Она должна скачать их, вызывая внутри curl и получая от него
-# данные через пайп (использовать libcurl не надо, надо просто запустить curl как отдельный процесс). Файлы содержат текст на естественном языке. Для простоты можно обрабатывать только буквы английского языка и цифры. Пунктуацию откидываем, морфологию учитывать не нужно, стоит лишь
-# привести текcт к одному регистру, чтобы повысить заполняемость цепи.
-# Также задается параметр n - порядок цепи. По входному тексту строится
-# марковская цепь, и сохраняется в файл (можно выдавать в стандартный
-# вывод).
-
-# Эксплуатирующей части на вход подаются начальный отрывок из n слов и
-# число - количество слов, которые надо достроить по начальному отрывку и
-# построенной обучающей частью марковской цепи, которую надо загрузить из
-# файла. Если в какой-то момент программа не знает какую-то
-# последовательность слов (не встречалась при построении марковской цепи),
-# то на этом можно построение текста завершить. Вывод надо выдавать в
-# поток стандартного вывода. Вход можно принимать как со стандартного
-# потока ввода, так и указанием файлов и параметров в командной
-# строке, но не хардкодить имена в тексте программы.
-
-# http://textfiles.com/adventure/221baker.txt
-
 # import argparse
 import re
 import pickle
+import json
 import subprocess
 import sys
 import os
 
-# def __get_data(self):
-#     cmdline = ["cmd", "/q", "/k", 'diskpart /s %s' % (self.filename)]
-#     cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-#     result, errors = cmd.communicate()
-#     if errors: raise Exception(errors)
-#     return result
-
-# script_file = open(self.filename, "w+")
-# for command in commands:
-#     script_file.write('%s\n' % (command))
-# script_file.close()
-def save_obj(obj, filename):
-    with open(filename, 'w') as file:
-        pickle.dump(obj, file, 0)
-        # pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-
-def load_obj(filename):
-    with open(filename, 'r') as file:
-        return pickle.load(file)
-
-class Sources:
-    def __init__(self, filename):
-        self.filename = filename
-
-    def get_sources(self):
-        sources = []
-        current_directory = os.path.dirname(os.path.realpath(__file__))
-        print "Pwd: ", current_directory
-        file = open(filename, 'r')
-        for line in file:
-            sources.append(line.rstrip())
-        print sources
-        file.close
-        return sources
-
-    # def get_sources(self):
-    #     sources = []
-    #     config_file = open(self.filename, "r")
-    #     for line in config_file:
-    #         sources.append(line)
-    #     config_file.close()
-    #     return sources
-
-
 class Learner:
-    def __init__(self, sources, order, filename):
+    def __init__(self, sources, order, output_file):
         self.sources = sources
         self.chain = {}
         self.order = order
-        self.filename = filename
+        self.filename = output_file
 
     def learn(self):
         for file_url in self.sources:
             self.add_file_to_chain(file_url)
-        save_obj(self.chain, filename)
+        self.save_chain(self.chain, self.filename)
 
     def add_file_to_chain(self, file_url):
         words = self.read_words(file_url)
-        # chains = {}
         for index in range(self.order, len(words)):
-            segment = tuple(words[(index - order) : index])
-            # print "Segment: ", segment
+            segment = tuple(words[(index - self.order) : index])
             word = words[index]
-            # print "Word: ", word
             if segment not in self.chain:
                 self.chain[segment] = [word]
-                # print "Segment not in chain yet, creating it: ", self.chain[segment]
             else:
                 if word not in self.chain[segment]: self.chain[segment].append(word)
-                # print "Segment already in chain: ", self.chain[segment]
 
     def read_file(self, file_url):
         cmdline = ["curl %s" % (file_url)]
-        cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=True)
         result, errors = cmd.communicate()
-        # if errors: raise Exception(errors)
         return result
 
     def read_words(self, file_url):
         regex = re.compile('[^a-z0-9$]')
         text = self.read_file(file_url).lower()
         words = [word for word in regex.sub(' ', text).split()]
-        # for word in words: print word
         return words
 
+    def save_chain(self, obj, filename):
+        file = open(filename, 'w+')
+        for key in obj:
+            print "%s : %s" % (key, obj[key])
+            file.write("%s%s\n" % (key, obj[key]))
+
+    # def save_chain(self, obj, filename):
+    #     with open(filename, 'wb') as file:
+    #         pickle.dump(obj, file)
+
 class ChainUser:
-    def __init__(self, file):
-        self.chain = load_obj(file)
-        print self.chain
+    def __init__(self, chain_file, length, words):
+        self.order = 1
+        self.filename = chain_file
+        self.phrase = words
 
 
-# handle_args(sys.argv)
-def confini(args):
+
+def get_sources(filename):
+    sources = []
+    file = open(filename, 'r')
+    for line in file:
+        sources.append(line.rstrip())
+    file.close
+    return sources
+
+def handle_args(args):
+    print args
     if len(args) == 1:
         print "HELP!"
     elif args[1] == "-l":
         print "LEARN!"
-        get_sources(args[2])
+        source = get_sources(args[2])
+        order = int(args[3])
+        output = args[4]
+        l = Learner(source, order, output)
+        l.learn()
     elif args[1] == "-u":
         print "USE!"
     else:
         print "HELP!!!!"
 
-confini(sys.argv)
+handle_args(sys.argv)
 
+
+
+
+# def save_chain(obj, filename):
+#     with open(filename, 'w') as file:
+#         pickle.dump(obj, file, 0)
+#         # pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+# def load_obj(filename):
+#     with open(filename, 'r') as file:
+#         return pickle.load(file)
+
+# class Sources:
+#     def __init__(self, filename):
+#         self.filename = filename
+
+#     def get_sources(self):
+#         sources = []
+#         current_directory = os.path.dirname(os.path.realpath(__file__))
+#         print "Pwd: ", current_directory
+#         file = open(filename, 'r')
+#         for line in file:
+#             sources.append(line.rstrip())
+#         print sources
+#         file.close
+#         return sources
+
+#     # def get_sources(self):
+#     #     sources = []
+#     #     config_file = open(self.filename, "r")
+#     #     for line in config_file:
+#     #         sources.append(line)
+#     #     config_file.close()
+#     #     return sources
+
+
+# class Learner:
+#     def __init__(self, sources, order, filename):
+#         self.sources = sources
+#         self.chain = {}
+#         self.order = order
+#         self.filename = filename
+
+#     def learn(self):
+#         for file_url in self.sources:
+#             self.add_file_to_chain(file_url)
+#         save_chain(self.chain, filename)
+
+#     def add_file_to_chain(self, file_url):
+#         words = self.read_words(file_url)
+#         # chains = {}
+#         for index in range(self.order, len(words)):
+#             segment = tuple(words[(index - order) : index])
+#             # print "Segment: ", segment
+#             word = words[index]
+#             # print "Word: ", word
+#             if segment not in self.chain:
+#                 self.chain[segment] = [word]
+#                 # print "Segment not in chain yet, creating it: ", self.chain[segment]
+#             else:
+#                 if word not in self.chain[segment]: self.chain[segment].append(word)
+#                 # print "Segment already in chain: ", self.chain[segment]
+
+#     def read_file(self, file_url):
+#         cmdline = ["curl %s" % (file_url)]
+#         cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+#         result, errors = cmd.communicate()
+#         # if errors: raise Exception(errors)
+#         return result
+
+#     def read_words(self, file_url):
+#         regex = re.compile('[^a-z0-9$]')
+#         text = self.read_file(file_url).lower()
+#         words = [word for word in regex.sub(' ', text).split()]
+#         # for word in words: print word
+#         return words
+
+# class ChainUser:
+#     def __init__(self, file):
+#         self.chain = load_obj(file)
+#         print self.chain
+
+
+# # handle_args(sys.argv)
+# def confini(args):
+#     if len(args) == 1:
+#         print "HELP!"
+#     elif args[1] == "-l":
+#         print "LEARN!"
+#         get_sources(args[2])
+#     elif args[1] == "-u":
+#         print "USE!"
+#     else:
+#         print "HELP!!!!"
+
+# confini(sys.argv)
+
+
+
+
+
+# Example: http://textfiles.com/adventure/221baker.txt
 
 
 # order = 2
@@ -246,3 +295,21 @@ confini(sys.argv)
 #         print "HELP!!!!"
 
 # handle_args(sys.argv)
+
+
+
+
+
+
+
+
+# def __get_data(self):
+#     cmdline = ["cmd", "/q", "/k", 'diskpart /s %s' % (self.filename)]
+#     cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+#     result, errors = cmd.communicate()
+#     if errors: raise Exception(errors)
+#     return result
+
+# script_file = open(self.filename, "w+")
+# for command in commands:
+#     script_file.write('%s\n' % (command))
