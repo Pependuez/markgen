@@ -55,9 +55,37 @@ class Learner:
 
 class ChainUser:
     def __init__(self, chain_file, length, words):
-        self.order = 1
+        self.order = 0
         self.filename = chain_file
-        self.phrase = words
+        self.phrase = words.split(' ')
+        self.length = length
+        self.chain = {}
+
+    def get_chain(self):
+        with open(self.filename, 'r+') as file:
+            for line in file:
+                regex_key = re.compile('\((.+)\)\[')
+                regex_value = re.compile('\)\[(.+)\]')
+                key = tuple(re.sub("'", "",re.search(regex_key, line).group(1)).split(", "))
+                print "Key: ", key
+                value = list(re.sub("'", "",re.search(regex_value, line).group(1)).split(", "))
+                print "Value: ", value
+                self.chain[key] = value
+                self.order = len(self.chain.keys()[0])
+
+    def next_word(self):
+        return self.chain[list(self.phrase[-self.order:])]
+    
+    def construct_phrase(self):
+        for len(self.phrase) < self.length
+            self.phrase.append(next_word())
+        return self.phrase
+
+    def initial_check():
+        pass
+
+
+
 
 
 
