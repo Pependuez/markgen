@@ -2,11 +2,13 @@
 
 # import argparse
 import re
-import pickle
-import json
+# import pickle
+# import json
 import subprocess
 import sys
 import os
+import random
+
 
 class Learner:
     def __init__(self, sources, order, output_file):
@@ -23,17 +25,19 @@ class Learner:
     def add_file_to_chain(self, file_url):
         words = self.read_words(file_url)
         for index in range(self.order, len(words)):
-            segment = tuple(words[(index - self.order) : index])
+            segment = tuple(words[(index - self.order): index])
             word = words[index]
             if segment not in self.chain:
                 self.chain[segment] = [word]
             else:
-                if word not in self.chain[segment]: self.chain[segment].append(word)
+                if word not in self.chain[segment]:
+                    self.chain[segment].append(word)
 
     def read_file(self, file_url):
         cmdline = ["curl %s" % (file_url)]
-        cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, shell=True)
+        cmd = subprocess.Popen(
+            cmdline, stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         result, errors = cmd.communicate()
         return result
 
@@ -49,44 +53,85 @@ class Learner:
             print "%s : %s" % (key, obj[key])
             file.write("%s%s\n" % (key, obj[key]))
 
-    # def save_chain(self, obj, filename):
-    #     with open(filename, 'wb') as file:
-    #         pickle.dump(obj, file)
 
 class ChainUser:
     def __init__(self, chain_file, length, words):
         self.order = 0
         self.filename = chain_file
-        self.phrase = words.split(' ')
+        print "Words: ", words
+        self.phrase = words  # .split(' ')
         self.length = length
         self.chain = {}
 
     def get_chain(self):
+        print "Reading chain from file..."
         with open(self.filename, 'r+') as file:
             for line in file:
                 regex_key = re.compile('\((.+)\)\[')
                 regex_value = re.compile('\)\[(.+)\]')
-                key = tuple(re.sub("'", "",re.search(regex_key, line).group(1)).split(", "))
-                print "Key: ", key
-                value = list(re.sub("'", "",re.search(regex_value, line).group(1)).split(", "))
-                print "Value: ", value
+
+                key = tuple(re.sub("'", "", re.search(
+                        regex_key, line).group(1)).split(", "))
+
+                # print "Key: ", key
+
+                value = list(re.sub("'", "", re.search(
+                    regex_value, line).group(1)).split(", "))
+
+                # print "Value: ", value
                 self.chain[key] = value
                 self.order = len(self.chain.keys()[0])
+            print "Chain length: ", len(self.chain)
+            print "Order: ", self.order
 
-    def next_word(self):
-        return self.chain[list(self.phrase[-self.order:])]
-    
+    def next_words(self):
+        search_key = tuple(self.phrase[-self.order:])
+        return self.chain[search_key]
+
     def construct_phrase(self):
-        for len(self.phrase) < self.length
-            self.phrase.append(next_word())
-        return self.phrase
+        while len(self.phrase) < self.length:
+            next_word = random.choice(self.next_words())
+            self.phrase.append(next_word)
+            sys.stdout.write(', %s' % (self.phrase[-1]))
+        # return self.phrase
 
-    def initial_check():
-        pass
+    def find_result(self):
+        print "finding..."
+        sys.stdout.write('Result sequence: %s' % (self.phrase))
+        self.construct_phrase()
 
+    def process_phrase(self):
+        if len(self.phrase) == self.order:
+            print "processing..."
+            self.find_result()
+        elif len(self.phrase) > self.order:
+            self.check_first_words()
+            self.find_result()
+        else:
+            self.phrase = self.expand_phrase()
+            self.find_result()
 
+    def check_first_words(self):
+        if tuple(self.phrase[:self.order]) in self.chain:
+            counter = 0
+            length = len(self.phrase)
+            order = self.order
+            while counter < length - order:
+                word = self.phrase[order+counter]
+                key = tuple(self.phrase[counter:(order+counter)])
+                if word not in self.chain[key]:
+                    self.cant_find()
+                counter += 1
+        else:
+            self.cant_find()
 
+    def cant_find(self):
+        sys.exit('There are no such sequence.')
 
+    def expand_phrase(self):
+        for key in self.chain:
+            if key[:len(self.phrase)] == tuple(self.phrase):
+                return list(key)
 
 
 def get_sources(filename):
@@ -96,6 +141,7 @@ def get_sources(filename):
         sources.append(line.rstrip())
     file.close
     return sources
+
 
 def handle_args(args):
     print args
@@ -110,12 +156,16 @@ def handle_args(args):
         l.learn()
     elif args[1] == "-u":
         print "USE!"
+        chain_file = args[2]
+        length = int(args[3])
+        words = args[4:]
+        u = ChainUser(chain_file, length, words)
+        u.get_chain()
+        u.process_phrase()
     else:
         print "HELP!!!!"
 
 handle_args(sys.argv)
-
-
 
 
 # def save_chain(obj, filename):
@@ -173,15 +223,20 @@ handle_args(sys.argv)
 #             # print "Word: ", word
 #             if segment not in self.chain:
 #                 self.chain[segment] = [word]
-#                 # print "Segment not in chain yet, creating it: ", self.chain[segment]
+
+#                 # print "Segment not in chain yet, creating it: ",
+#                       self.chain[segment]
 #             else:
-#                 if word not in self.chain[segment]: self.chain[segment].append(word)
+#                 if word not in self.chain[segment]:
+#                     self.chain[segment].append(word)
 #                 # print "Segment already in chain: ", self.chain[segment]
 
 #     def read_file(self, file_url):
 #         cmdline = ["curl %s" % (file_url)]
-#         cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-#         result, errors = cmd.communicate()
+#         cmd = subprocess.Popen(
+#             cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+#             stderr=subprocess.PIPE, shell=True)
+#             result, errors = cmd.communicate()
 #         # if errors: raise Exception(errors)
 #         return result
 
@@ -213,14 +268,13 @@ handle_args(sys.argv)
 # confini(sys.argv)
 
 
-
-
-
 # Example: http://textfiles.com/adventure/221baker.txt
 
 
 # order = 2
-# l = Learner(["http://textfiles.com/adventure/221baker.txt", "http://textfiles.com/100/anonymit", "http://textfiles.com/programming/archives.txt"], order)
+# l = Learner(["http://textfiles.com/adventure/221baker.txt",
+#     "http://textfiles.com/100/anonymit",
+#     "http://textfiles.com/programming/archives.txt"], order)
 # l = Learner(["http://textfiles.com/sf/apf-6.0"], order)
 # l = Learner(["http://norvig.com/big.txt"], order)
 
@@ -291,11 +345,6 @@ handle_args(sys.argv)
 #         print "HELP!!!!"
 
 
-
-
-
-
-
 # import sys
 # import os
 
@@ -325,18 +374,14 @@ handle_args(sys.argv)
 # handle_args(sys.argv)
 
 
-
-
-
-
-
-
-# def __get_data(self):
+# def get_data(self):
 #     cmdline = ["cmd", "/q", "/k", 'diskpart /s %s' % (self.filename)]
-#     cmd = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-#     result, errors = cmd.communicate()
-#     if errors: raise Exception(errors)
-#     return result
+#    cmd = subprocess.Popen(
+#       cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+#       stderr=subprocess.PIPE, shell=True)
+#       result, errors = cmd.communicate()
+#    if errors: raise Exception(errors)
+#    return result
 
 # script_file = open(self.filename, "w+")
 # for command in commands:
