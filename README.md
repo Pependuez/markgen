@@ -2,7 +2,7 @@
 
 *Markov's chain generator*
 
-Script markgen.py generates Markov's chan using external text files and use this chain to complete words sequences.
+markgen.py generates Markov's chan using external text files and use this chain to complete words sequences.
 
 *Usage:*
     
@@ -21,3 +21,4 @@ Script markgen.py generates Markov's chan using external text files and use this
             chain_file - file containing prebuilded Markov's chain (string)
             phrase_length - number of words in output sentence (integer)
             word1, word2, etc. - first words of sentence (stings)
+urls.cfg, urls1.cfg - urls_file examples.
