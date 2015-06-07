@@ -2,7 +2,7 @@
 
 *Markov's chain generator*
 
-markgen.py generates Markov's chan using external text files and use this chain to complete words sequences.
+markgen.py - generates Markov's chan using external text files and use this chain to complete words sequences.
 
 *Usage:*
     
