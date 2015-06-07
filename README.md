@@ -10,7 +10,7 @@ Script markgen.py generates Markov's chan using external text files and use this
         
         python markgen.py -l urls_file chain_order chain_file
             -l - flag for learn mode (building Markov's chain and save it to file)
-            urls_file - file containing URLs to text files placed each on new string (string)
+            urls_file - file containing URLs to text files placed each on new line (string)
             chain_order - Markov's chain order (integer)
             chain_file - file to wite Markov's chain (string)
 
