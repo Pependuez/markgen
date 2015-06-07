@@ -14,6 +14,7 @@ class Learner:
         self.filename = output_file
 
     def learn(self):
+        print "Reading file(s)..."
         for file_url in self.sources:
             self.add_file_to_chain(file_url)
         self.save_chain(self.chain, self.filename)
@@ -74,23 +75,30 @@ class ChainUser:
                 self.order = len(self.chain.keys()[0])
 
     def next_words(self):
-        search_key = tuple(self.phrase[-self.order:])
-        return self.chain[search_key]
+        key = tuple(self.phrase[-self.order:])
+        if key in self.chain:
+            return self.chain[key]
+        else:
+            print ".\n\nInterrupted. No more words in sequence."
+            print "Current sequence length: %s words" % (len(self.phrase))
+            # sys.exit('.\nNo more words in sequence.')
+            sys.exit()
 
     def construct_phrase(self):
         while len(self.phrase) < self.length:
             next_word = random.choice(self.next_words())
             self.phrase.append(next_word)
-            sys.stdout.write(', %s' % (self.phrase[-1]))
+            sys.stdout.write(' %s' % (self.phrase[-1]))
+        print ".\n"
 
     def find_result(self):
-        print "Finding..."
-        sys.stdout.write('Result sequence: %s' % (self.phrase))
+        print "Finding words..."
+        sys.stdout.write('Result sequence: %s ' % (' '.join(self.phrase)))
         self.construct_phrase()
 
     def process_phrase(self):
+        print "Processing..."
         if len(self.phrase) == self.order:
-            print "Processing..."
             self.find_result()
         elif len(self.phrase) > self.order:
             self.check_first_words()
@@ -131,18 +139,33 @@ def get_sources(filename):
     return sources
 
 
+def print_help():
+    print '''Usage:
+    Learn mode:
+        python markgen.py -l urls_file chain_order chain_file
+            -l - flag for learn mode (building Markov's chain and save it to file)
+            urls_file - file with urls to text files (string)
+            chain_order - Markov's chain order (integer)
+            chain_file - file to wite Markov's chain (string)
+
+    Use mode:
+        python markgen.py -u chain_file phrase_length word1 dord2 ...
+            -u - flag for use mode (read Markov's chain from file and build phrase)
+            chain_file - file with prebuilded Markov's chain (string)
+            phrase_length - number of words in output sentence (integer)
+            word1, word2, etc. - first words of output sentence (stings)'''
+
+
 def handle_args(args):
     if len(args) == 1:
-        print "HELP!"
+        print_help()
     elif args[1] == "-l":
-        print "LEARN!"
         source = get_sources(args[2])
         order = int(args[3])
         output = args[4]
         l = Learner(source, order, output)
         l.learn()
     elif args[1] == "-u":
-        print "USE!"
         chain_file = args[2]
         length = int(args[3])
         words = args[4:]
@@ -150,6 +173,6 @@ def handle_args(args):
         u.get_chain()
         u.process_phrase()
     else:
-        print "HELP!!!!"
+        print_help()
 
 handle_args(sys.argv)
