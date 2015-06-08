@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
 import re
 import subprocess
 import sys
 import random
 
 
-class Learner:
+class Learner(object):
     def __init__(self, sources, order, output_file):
         self.sources = sources
         self.chain = {}
@@ -14,7 +14,7 @@ class Learner:
         self.filename = output_file
 
     def learn(self):
-        print "Reading file(s)..."
+        print("Reading file(s)...")
         for file_url in self.sources:
             self.add_file_to_chain(file_url)
         self.save_chain(self.chain, self.filename)
@@ -45,12 +45,12 @@ class Learner:
         return words
 
     def save_chain(self, obj, filename):
-        file = open(filename, 'w+')
-        for key in obj:
-            file.write("%s%s\n" % (key, obj[key]))
+        with open(self.filename, 'w+') as file:
+            for key in obj:
+                file.write("%s%s\n" % (key, obj[key]))
 
 
-class ChainUser:
+class ChainUser(object):
     def __init__(self, chain_file, length, words):
         self.order = 0
         self.filename = chain_file
@@ -59,7 +59,7 @@ class ChainUser:
         self.chain = {}
 
     def get_chain(self):
-        print "Reading chain from file..."
+        print("Reading chain from file...")
         with open(self.filename, 'r+') as file:
             for line in file:
                 regex_key = re.compile('\((.+)\)\[')
@@ -79,25 +79,24 @@ class ChainUser:
         if key in self.chain:
             return self.chain[key]
         else:
-            print ".\n\nInterrupted. No more words in sequence."
-            print "Current sequence length: %s words" % (len(self.phrase))
-            # sys.exit('.\nNo more words in sequence.')
+            print(".\n\nInterrupted. No more words in sequence.")
+            print("Current sequence length: %s words" % (len(self.phrase)))
             sys.exit()
 
     def construct_phrase(self):
         while len(self.phrase) < self.length:
             next_word = random.choice(self.next_words())
             self.phrase.append(next_word)
-            sys.stdout.write(' %s' % (self.phrase[-1]))
-        print ".\n"
+            print(' %s' % (self.phrase[-1]), end='')
+        print(".")
 
     def find_result(self):
-        print "Finding words..."
-        sys.stdout.write('Result sequence: %s ' % (' '.join(self.phrase)))
+        print("Finding words...")
+        print('Result sequence: %s ' % (' '.join(self.phrase)), end='')
         self.construct_phrase()
 
     def process_phrase(self):
-        print "Processing..."
+        print("Processing...")
         if len(self.phrase) == self.order:
             self.find_result()
         elif len(self.phrase) > self.order:
@@ -132,15 +131,14 @@ class ChainUser:
 
 def get_sources(filename):
     sources = []
-    file = open(filename, 'r')
-    for line in file:
-        sources.append(line.rstrip())
-    file.close
+    with open(filename, 'r+') as file:
+        for line in file:
+            sources.append(line.rstrip())
     return sources
 
 
 def print_help():
-    print '''Usage:
+    help_string = '''Usage:
     Learn mode:
         python markgen.py -l urls_file chain_order chain_file
             -l - flag for learn mode (building Markov's chain and save it to file)
@@ -154,6 +152,7 @@ def print_help():
             chain_file - file with prebuilded Markov's chain (string)
             phrase_length - number of words in output sentence (integer)
             word1, word2, etc. - first words of output sentence (stings)'''
+    print(help_string)
 
 
 def handle_args(args):
@@ -165,6 +164,7 @@ def handle_args(args):
         output = args[4]
         l = Learner(source, order, output)
         l.learn()
+        print("Done.")
     elif args[1] == "-u":
         chain_file = args[2]
         length = int(args[3])
