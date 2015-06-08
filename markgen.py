@@ -54,7 +54,7 @@ class ChainUser(object):
     def __init__(self, chain_file, length, words):
         self.order = 0
         self.filename = chain_file
-        self.phrase = words
+        self.phrase = [word.lower() for word in words]
         self.length = length
         self.chain = {}
 
@@ -92,7 +92,7 @@ class ChainUser(object):
 
     def find_result(self):
         print("Finding words...")
-        print('Result sequence: %s ' % (' '.join(self.phrase)), end='')
+        print('Result sequence: %s' % (' '.join(self.phrase)), end='')
         self.construct_phrase()
 
     def process_phrase(self):
