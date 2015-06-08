@@ -4,6 +4,10 @@ import re
 import subprocess
 import sys
 import random
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 
 class Learner(object):
@@ -17,7 +21,7 @@ class Learner(object):
         print("Reading file(s)...")
         for file_url in self.sources:
             self.add_file_to_chain(file_url)
-        self.save_chain(self.chain, self.filename)
+        self.save_chain()
 
     def add_file_to_chain(self, file_url):
         words = self.read_words(file_url)
@@ -44,10 +48,9 @@ class Learner(object):
         words = [word for word in regex.sub(' ', text).split()]
         return words
 
-    def save_chain(self, obj, filename):
-        with open(self.filename, 'w+') as file:
-            for key in obj:
-                file.write("%s%s\n" % (key, obj[key]))
+    def save_chain(self):
+        with open(self.filename, 'w+') as chain_file:
+            pickle.dump(self.chain, chain_file, pickle.HIGHEST_PROTOCOL)
 
 
 class ChainUser(object):
@@ -60,19 +63,9 @@ class ChainUser(object):
 
     def get_chain(self):
         print("Reading chain from file...")
-        with open(self.filename, 'r+') as file:
-            for line in file:
-                regex_key = re.compile('\((.+)\)\[')
-                regex_value = re.compile('\)\[(.+)\]')
-
-                key = tuple(re.sub("'", "", re.search(
-                        regex_key, line).group(1)).split(", "))
-
-                value = list(re.sub("'", "", re.search(
-                    regex_value, line).group(1)).split(", "))
-
-                self.chain[key] = value
-                self.order = len(self.chain.keys()[0])
+        with open(self.filename) as chain_file:
+            self.chain = pickle.load(chain_file)
+            self.order = len(self.chain.keys()[0])
 
     def next_words(self):
         key = tuple(self.phrase[-self.order:])
